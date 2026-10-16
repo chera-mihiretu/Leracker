@@ -9,6 +9,7 @@
 .buildlog/
 .history
 .svn/
+.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -17,20 +18,28 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# VS Code related
-.vscode/
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+assets/keys/.env
+assets/keys/*
+!assets/keys/.gitkeep
 
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
-.flutter-plugins
 .flutter-plugins-dependencies
-.packages
 .pub-cache/
 .pub/
 /build/
-pubspec.lock
+/coverage/
 
 # Symbolication related
 app.*.symbols
@@ -43,10 +52,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Platform-specific
-/android/.gradle/
-/android/local.properties
-/ios/Pods/
-/ios/.symlinks/
-/macos/Pods/
-/macos/.symlinks/
+# Android build outputs
+android/build/
+android/app/build/
