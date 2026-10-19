@@ -44,3 +44,4 @@
 
 11. **Auto-sync**: Read actual LeetCode account and mark problems done automatically, or just copy the visual style?
 12. **Manual tracker**: If manual, should adding a task also create a LeetCode-style entry for that day?
+

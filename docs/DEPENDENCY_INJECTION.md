@@ -60,3 +60,4 @@ lib/
 - [ ] No class other than the container and `main` imports the locator.
 - [ ] The setup function runs before `runApp`.
 - [ ] The BLoC is a **factory**, and everything else is a **singleton**.
+
