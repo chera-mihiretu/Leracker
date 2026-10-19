@@ -32,3 +32,4 @@ class CacheFailure extends Failure {
 class NetworkFailure extends Failure {
   const NetworkFailure({super.message = 'Network error occurred', super.code});
 }
+
