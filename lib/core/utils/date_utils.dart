@@ -17,3 +17,4 @@ class AppDateUtils {
     return dateOnly(end).difference(dateOnly(start)).inDays;
   }
 }
+
