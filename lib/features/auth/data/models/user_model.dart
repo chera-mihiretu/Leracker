@@ -10,21 +10,33 @@ class UserModel extends UserEntity {
   });
 
   factory UserModel.fromSupabaseUser(supabase.User user) {
+    final metadata = user.userMetadata;
     return UserModel(
       id: user.id,
       email: user.email,
-      displayName: user.userMetadata?['full_name'] as String? ??
-          user.userMetadata?['name'] as String?,
-      avatarUrl: user.userMetadata?['avatar_url'] as String?,
+      displayName: metadata?['full_name'] as String? ??
+          metadata?['name'] as String?,
+      avatarUrl: metadata?['avatar_url'] as String? ??
+          metadata?['picture'] as String?,
     );
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final meta = json['raw_user_meta_data'] as Map<String, dynamic>? ??
+        json['user_metadata'] as Map<String, dynamic>?;
+
     return UserModel(
-      id: json['id'] as String,
-      email: json['email'] as String?,
-      displayName: json['display_name'] as String?,
-      avatarUrl: json['avatar_url'] as String?,
+      id: (json['id'] ?? json['sub'] ?? '') as String,
+      email: (json['email'] ?? meta?['email']) as String?,
+      displayName: (json['display_name'] ??
+          meta?['full_name'] ??
+          meta?['name'] ??
+          json['full_name'] ??
+          json['name']) as String?,
+      avatarUrl: (json['avatar_url'] ??
+          meta?['avatar_url'] ??
+          meta?['picture'] ??
+          json['picture']) as String?,
     );
   }
 
