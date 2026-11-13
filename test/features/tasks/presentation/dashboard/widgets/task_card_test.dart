@@ -105,5 +105,97 @@ void main() {
 
     expect(task.isCompletedToday, isFalse);
   });
-}
 
+  testWidgets(
+      'showCellSheet on past day displays read-only info and cannot be edited',
+      (tester) async {
+    final pastDay = addDays(today, -5);
+    final task = TaskItem(
+      id: 'past-task',
+      name: 'Past Day Habit',
+      gridColor: const Color(0xFF22C55E),
+      createdAt: addDays(today, -10),
+      entries: {pastDay: EntryStatus.done},
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DashTheme(
+            palette: DashPalette.dark,
+            child: Builder(builder: (context) {
+              return TextButton(
+                onPressed: () => showCellSheet(
+                  context: context,
+                  task: task,
+                  day: pastDay,
+                  onSet: (_) {},
+                ),
+                child: const Text('Open Sheet'),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open Sheet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Past Day Habit'), findsOneWidget);
+    expect(find.text('Past entries cannot be edited'), findsOneWidget);
+    expect(find.text('Status: Completed'), findsOneWidget);
+
+    // Edit options should NOT exist
+    expect(find.text('Done'), findsNothing);
+    expect(find.text('Missed'), findsNothing);
+    expect(find.text('Reset'), findsNothing);
+  });
+
+  testWidgets(
+      'showCellSheet on today displays editable options Done, Missed, and Reset',
+      (tester) async {
+    EntryStatus? selectedStatus;
+    final task = TaskItem(
+      id: 'today-task',
+      name: 'Today Habit',
+      gridColor: const Color(0xFF22C55E),
+      createdAt: addDays(today, -10),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DashTheme(
+            palette: DashPalette.dark,
+            child: Builder(builder: (context) {
+              return TextButton(
+                onPressed: () => showCellSheet(
+                  context: context,
+                  task: task,
+                  day: today,
+                  onSet: (s) => selectedStatus = s,
+                ),
+                child: const Text('Open Sheet'),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open Sheet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Today Habit'), findsOneWidget);
+    expect(find.text('Past entries cannot be edited'), findsNothing);
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.text('Missed'), findsOneWidget);
+    expect(find.text('Reset'), findsOneWidget);
+
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    expect(selectedStatus, EntryStatus.done);
+  });
+}

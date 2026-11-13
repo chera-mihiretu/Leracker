@@ -199,7 +199,7 @@ class _HeatmapPainter extends CustomPainter {
   bool shouldRepaint(covariant _HeatmapPainter o) => true;
 }
 
-/// Small sheet opened by tapping a cell: date, status, Done / Missed / Reset.
+/// Small sheet opened by tapping a cell: date, status, and Done / Missed / Reset (for today only).
 Future<void> showCellSheet({
   required BuildContext context,
   required TaskItem task,
@@ -207,7 +207,9 @@ Future<void> showCellSheet({
   required void Function(EntryStatus? status) onSet,
 }) {
   final p = DashTheme.of(context);
-  final state = task.cellState(day, dateOnly(DateTime.now()));
+  final today = dateOnly(DateTime.now());
+  final isPast = dateOnly(day).isBefore(today);
+  final state = task.cellState(day, today);
   final label = switch (state) {
     CellState.done => 'Completed',
     CellState.missed => 'Missed',
@@ -278,17 +280,70 @@ Future<void> showCellSheet({
               Text('Status: $label',
                   style: TextStyle(fontSize: 14, color: p.textMuted)),
               const SizedBox(height: 18),
-              Row(
-                children: [
-                  option('Done', Icons.check_rounded, EntryStatus.done,
-                      s == EntryStatus.done),
-                  const SizedBox(width: 10),
-                  option('Missed', Icons.close_rounded, EntryStatus.missed,
-                      s == EntryStatus.missed),
-                  const SizedBox(width: 10),
-                  option('Reset', Icons.refresh_rounded, null, false),
-                ],
-              ),
+              if (isPast)
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: p.isDark ? p.bg : p.rest,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: p.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        state == CellState.done
+                            ? Icons.check_circle_rounded
+                            : state == CellState.missed
+                                ? Icons.cancel_rounded
+                                : Icons.info_outline_rounded,
+                        size: 20,
+                        color: state == CellState.done
+                            ? DashPalette.emerald
+                            : state == CellState.missed
+                                ? p.missed
+                                : p.textMuted,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: p.text,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Past entries cannot be edited',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: p.textFaint,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    option('Done', Icons.check_rounded, EntryStatus.done,
+                        s == EntryStatus.done),
+                    const SizedBox(width: 10),
+                    option('Missed', Icons.close_rounded, EntryStatus.missed,
+                        s == EntryStatus.missed),
+                    const SizedBox(width: 10),
+                    option('Reset', Icons.refresh_rounded, null, false),
+                  ],
+                ),
             ],
           ),
         ),

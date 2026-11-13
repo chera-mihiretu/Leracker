@@ -16,6 +16,11 @@ class TaskCard extends StatelessWidget {
   });
 
   void _showStatusDialog(BuildContext context, DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final targetDate = DateTime(date.year, date.month, date.day);
+    final isPast = targetDate.isBefore(today);
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -45,37 +50,50 @@ class TaskCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.green.shade600,
-                        ),
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          onSetStatus(date, 'done');
-                        },
-                        icon: const Icon(Icons.check),
-                        label: const Text('Done'),
+                if (isPast)
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Past entries cannot be edited',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.outline,
+                        fontSize: 13,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.grey.shade700,
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.green.shade600,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            onSetStatus(date, 'done');
+                          },
+                          icon: const Icon(Icons.check),
+                          label: const Text('Done'),
                         ),
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          onSetStatus(date, 'missed');
-                        },
-                        icon: const Icon(Icons.close),
-                        label: const Text('Missed'),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.grey.shade700,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            onSetStatus(date, 'missed');
+                          },
+                          icon: const Icon(Icons.close),
+                          label: const Text('Missed'),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
