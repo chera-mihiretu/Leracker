@@ -62,6 +62,18 @@ class TaskCard extends StatelessWidget {
                       ),
                     ),
                   )
+                else if (!task.isDueOn(targetDate))
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'This task is not scheduled for today',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.outline,
+                        fontSize: 13,
+                      ),
+                    ),
+                  )
                 else
                   Row(
                     children: [

@@ -11,7 +11,9 @@ import 'package:progress_tracker/features/tasks/data/models/task_model.dart';
 import 'package:progress_tracker/features/tasks/data/repositories/task_repository_impl.dart';
 
 class MockTaskRemoteDataSource extends Mock implements TaskRemoteDataSource {}
+
 class MockTaskLocalDataSource extends Mock implements TaskLocalDataSource {}
+
 class MockNetworkInfo extends Mock implements NetworkInfo {}
 
 void main() {
@@ -53,26 +55,33 @@ void main() {
   });
 
   group('getTasks', () {
-    test('when online: fetches remote, caches locally, and returns list', () async {
-      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockRemoteDataSource.getTasks())
-          .thenAnswer((_) async => [testTaskModel]);
-      when(() => mockLocalDataSource.saveTasks(any()))
-          .thenAnswer((_) async {});
+    test(
+      'when online: fetches remote, caches locally, and returns list',
+      () async {
+        when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
+        when(
+          () => mockRemoteDataSource.getTasks(),
+        ).thenAnswer((_) async => [testTaskModel]);
+        when(
+          () => mockLocalDataSource.saveTasks(any()),
+        ).thenAnswer((_) async {});
 
-      final result = await repository.getTasks();
+        final result = await repository.getTasks();
 
-      expect(result.isRight(), isTrue);
-      expect(result.getOrElse((_) => []), equals([testTaskModel]));
-      verify(() => mockLocalDataSource.saveTasks([testTaskModel])).called(1);
-    });
+        expect(result.isRight(), isTrue);
+        expect(result.getOrElse((_) => []), equals([testTaskModel]));
+        verify(() => mockLocalDataSource.saveTasks([testTaskModel])).called(1);
+      },
+    );
 
     test('when online but remote fails: falls back to local cache', () async {
       when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockRemoteDataSource.getTasks())
-          .thenThrow(const ServerException(message: 'Remote error'));
-      when(() => mockLocalDataSource.getTasks())
-          .thenAnswer((_) async => [testTaskModel]);
+      when(
+        () => mockRemoteDataSource.getTasks(),
+      ).thenThrow(const ServerException(message: 'Remote error'));
+      when(
+        () => mockLocalDataSource.getTasks(),
+      ).thenAnswer((_) async => [testTaskModel]);
 
       final result = await repository.getTasks();
 
@@ -82,8 +91,9 @@ void main() {
 
     test('when offline: returns local cached tasks', () async {
       when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      when(() => mockLocalDataSource.getTasks())
-          .thenAnswer((_) async => [testTaskModel]);
+      when(
+        () => mockLocalDataSource.getTasks(),
+      ).thenAnswer((_) async => [testTaskModel]);
 
       final result = await repository.getTasks();
 
@@ -94,9 +104,12 @@ void main() {
   });
 
   group('addTask', () {
-    test('when online: creates remotely and saves locally with isUploaded: true', () async {
-      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockRemoteDataSource.addTask(
+    test(
+      'when online: creates remotely and saves locally with isUploaded: true',
+      () async {
+        when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
+        when(
+          () => mockRemoteDataSource.addTask(
             name: any(named: 'name'),
             frequencyType: any(named: 'frequencyType'),
             daysOfWeek: any(named: 'daysOfWeek'),
@@ -105,48 +118,58 @@ void main() {
             reminderCount: any(named: 'reminderCount'),
             gridColor: any(named: 'gridColor'),
             includeInMorningReview: any(named: 'includeInMorningReview'),
-          )).thenAnswer((_) async => testTaskModel);
-      when(() => mockLocalDataSource.saveTask(any()))
-          .thenAnswer((_) async {});
+          ),
+        ).thenAnswer((_) async => testTaskModel);
+        when(
+          () => mockLocalDataSource.saveTask(any()),
+        ).thenAnswer((_) async {});
 
-      final result = await repository.addTask(name: 'Run');
+        final result = await repository.addTask(name: 'Run');
 
-      expect(result.isRight(), isTrue);
-      expect(result.getOrElse((_) => testTaskModel).id, testTaskModel.id);
-      expect(result.getOrElse((_) => testTaskModel).isUploaded, isTrue);
-      verify(() => mockLocalDataSource.saveTask(testTaskModel.copyWith(isUploaded: true))).called(1);
-    });
+        expect(result.isRight(), isTrue);
+        expect(result.getOrElse((_) => testTaskModel).id, testTaskModel.id);
+        expect(result.getOrElse((_) => testTaskModel).isUploaded, isTrue);
+        verify(
+          () => mockLocalDataSource.saveTask(
+            testTaskModel.copyWith(isUploaded: true),
+          ),
+        ).called(1);
+      },
+    );
 
-    test('when offline: creates optimistic local task marked with isUploaded: false and saves locally', () async {
-      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      when(() => mockLocalDataSource.saveTask(any()))
-          .thenAnswer((_) async {});
+    test(
+      'when offline: creates optimistic local task marked with isUploaded: false and saves locally',
+      () async {
+        when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
+        when(
+          () => mockLocalDataSource.saveTask(any()),
+        ).thenAnswer((_) async {});
 
-      final result = await repository.addTask(name: 'Run');
+        final result = await repository.addTask(name: 'Run');
 
-      expect(result.isRight(), isTrue);
-      result.fold(
-        (_) => fail('should be right'),
-        (task) {
+        expect(result.isRight(), isTrue);
+        result.fold((_) => fail('should be right'), (task) {
           expect(task.name, 'Run');
           expect(task.isUploaded, isFalse);
-        },
-      );
-      verifyZeroInteractions(mockRemoteDataSource);
-    });
+        });
+        verifyZeroInteractions(mockRemoteDataSource);
+      },
+    );
 
     test('returns ServerFailure on ServerException', () async {
       when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockRemoteDataSource.addTask(
-            name: any(named: 'name'),
-            frequencyType: any(named: 'frequencyType'),
-            daysOfWeek: any(named: 'daysOfWeek'),
-            monthlyRule: any(named: 'monthlyRule'),
-            startTime: any(named: 'startTime'),
-            reminderCount: any(named: 'reminderCount'),
-            gridColor: any(named: 'gridColor'),
-            includeInMorningReview: any(named: 'includeInMorningReview'),
-          )).thenThrow(const ServerException(message: 'Creation failed'));
+      when(
+        () => mockRemoteDataSource.addTask(
+          name: any(named: 'name'),
+          frequencyType: any(named: 'frequencyType'),
+          daysOfWeek: any(named: 'daysOfWeek'),
+          monthlyRule: any(named: 'monthlyRule'),
+          startTime: any(named: 'startTime'),
+          reminderCount: any(named: 'reminderCount'),
+          gridColor: any(named: 'gridColor'),
+          includeInMorningReview: any(named: 'includeInMorningReview'),
+        ),
+      ).thenThrow(const ServerException(message: 'Creation failed'));
 
       final result = await repository.addTask(name: 'Run');
 
@@ -157,8 +180,12 @@ void main() {
   group('archiveTask', () {
     test('archives remotely if online and archives locally', () async {
       when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockRemoteDataSource.archiveTask('t1')).thenAnswer((_) async {});
-      when(() => mockLocalDataSource.archiveTask('t1')).thenAnswer((_) async {});
+      when(
+        () => mockRemoteDataSource.archiveTask('t1'),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockLocalDataSource.archiveTask('t1'),
+      ).thenAnswer((_) async {});
 
       final result = await repository.archiveTask('t1');
 
@@ -171,12 +198,16 @@ void main() {
   group('recordTaskEntry', () {
     test('when online: records remotely and saves locally', () async {
       when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockRemoteDataSource.recordTaskEntry(
-            taskId: 't1',
-            entryDate: now,
-            status: 'done',
-          )).thenAnswer((_) async => testEntryModel);
-      when(() => mockLocalDataSource.saveTaskEntry(any())).thenAnswer((_) async {});
+      when(
+        () => mockRemoteDataSource.recordTaskEntry(
+          taskId: 't1',
+          entryDate: now,
+          status: 'done',
+        ),
+      ).thenAnswer((_) async => testEntryModel);
+      when(
+        () => mockLocalDataSource.saveTaskEntry(any()),
+      ).thenAnswer((_) async {});
 
       final result = await repository.recordTaskEntry(
         taskId: 't1',
@@ -190,7 +221,9 @@ void main() {
 
     test('when offline: creates local optimistic entry', () async {
       when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      when(() => mockLocalDataSource.saveTaskEntry(any())).thenAnswer((_) async {});
+      when(
+        () => mockLocalDataSource.saveTaskEntry(any()),
+      ).thenAnswer((_) async {});
 
       final result = await repository.recordTaskEntry(
         taskId: 't1',
@@ -207,25 +240,34 @@ void main() {
   });
 
   group('getAllTaskEntries', () {
-    test('when online: gets remote entries, caches them and groups by taskId', () async {
-      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockRemoteDataSource.getAllTaskEntries())
-          .thenAnswer((_) async => [testEntryModel]);
-      when(() => mockLocalDataSource.saveTaskEntries(any())).thenAnswer((_) async {});
+    test(
+      'when online: gets remote entries, caches them and groups by taskId',
+      () async {
+        when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
+        when(
+          () => mockRemoteDataSource.getAllTaskEntries(),
+        ).thenAnswer((_) async => [testEntryModel]);
+        when(
+          () => mockLocalDataSource.saveTaskEntries(any()),
+        ).thenAnswer((_) async {});
 
-      final result = await repository.getAllTaskEntries();
+        final result = await repository.getAllTaskEntries();
 
-      expect(result.isRight(), isTrue);
-      result.fold(
-        (_) => fail('should be right'),
-        (map) => expect(map['t1']?.length, 1),
-      );
-    });
+        expect(result.isRight(), isTrue);
+        result.fold(
+          (_) => fail('should be right'),
+          (map) => expect(map['t1']?.length, 1),
+        );
+      },
+    );
 
     test('when offline: reads from local cache', () async {
       when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      when(() => mockLocalDataSource.getTaskEntries())
-          .thenAnswer((_) async => {'t1': [testEntryModel]});
+      when(() => mockLocalDataSource.getTaskEntries()).thenAnswer(
+        (_) async => {
+          't1': [testEntryModel],
+        },
+      );
 
       final result = await repository.getAllTaskEntries();
 
@@ -250,7 +292,9 @@ void main() {
 
     test('when online but no unsynced tasks: returns empty list', () async {
       when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockLocalDataSource.getUnsyncedTasks()).thenAnswer((_) async => []);
+      when(
+        () => mockLocalDataSource.getUnsyncedTasks(),
+      ).thenAnswer((_) async => []);
 
       final result = await repository.syncUnsyncedTasks();
 
@@ -259,26 +303,30 @@ void main() {
       verifyZeroInteractions(mockRemoteDataSource);
     });
 
-    test('when online with unsynced tasks: uploads them, marks as uploaded, removes temp local task, avoids duplicate', () async {
-      final localUnsyncedTask = TaskModel(
-        id: 'local_123',
-        userId: 'local_user',
-        name: 'Offline Habit',
-        createdAt: now,
-        isUploaded: false,
-      );
-      final remoteCreatedTask = TaskModel(
-        id: 'remote_999',
-        userId: 'u1',
-        name: 'Offline Habit',
-        createdAt: now,
-        isUploaded: true,
-      );
+    test(
+      'when online with unsynced tasks: uploads them, marks as uploaded, removes temp local task, avoids duplicate',
+      () async {
+        final localUnsyncedTask = TaskModel(
+          id: 'local_123',
+          userId: 'local_user',
+          name: 'Offline Habit',
+          createdAt: now,
+          isUploaded: false,
+        );
+        final remoteCreatedTask = TaskModel(
+          id: 'remote_999',
+          userId: 'u1',
+          name: 'Offline Habit',
+          createdAt: now,
+          isUploaded: true,
+        );
 
-      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockLocalDataSource.getUnsyncedTasks())
-          .thenAnswer((_) async => [localUnsyncedTask]);
-      when(() => mockRemoteDataSource.addTask(
+        when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
+        when(
+          () => mockLocalDataSource.getUnsyncedTasks(),
+        ).thenAnswer((_) async => [localUnsyncedTask]);
+        when(
+          () => mockRemoteDataSource.addTask(
             name: 'Offline Habit',
             frequencyType: any(named: 'frequencyType'),
             daysOfWeek: any(named: 'daysOfWeek'),
@@ -287,23 +335,31 @@ void main() {
             reminderCount: any(named: 'reminderCount'),
             gridColor: any(named: 'gridColor'),
             includeInMorningReview: any(named: 'includeInMorningReview'),
-          )).thenAnswer((_) async => remoteCreatedTask);
-      when(() => mockLocalDataSource.deleteTask('local_123')).thenAnswer((_) async {});
-      when(() => mockLocalDataSource.saveTask(any())).thenAnswer((_) async {});
-      when(() => mockLocalDataSource.updateEntryTaskId(
+          ),
+        ).thenAnswer((_) async => remoteCreatedTask);
+        when(
+          () => mockLocalDataSource.deleteTask('local_123'),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockLocalDataSource.saveTask(any()),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockLocalDataSource.updateEntryTaskId(
             oldTaskId: 'local_123',
             newTaskId: 'remote_999',
-          )).thenAnswer((_) async {});
+          ),
+        ).thenAnswer((_) async {});
 
-      final result = await repository.syncUnsyncedTasks();
+        final result = await repository.syncUnsyncedTasks();
 
-      expect(result.isRight(), isTrue);
-      final uploaded = result.getOrElse((_) => []);
-      expect(uploaded.length, 1);
-      expect(uploaded.first.id, 'remote_999');
-      expect(uploaded.first.isUploaded, isTrue);
+        expect(result.isRight(), isTrue);
+        final uploaded = result.getOrElse((_) => []);
+        expect(uploaded.length, 1);
+        expect(uploaded.first.id, 'remote_999');
+        expect(uploaded.first.isUploaded, isTrue);
 
-      verify(() => mockRemoteDataSource.addTask(
+        verify(
+          () => mockRemoteDataSource.addTask(
             name: 'Offline Habit',
             frequencyType: any(named: 'frequencyType'),
             daysOfWeek: any(named: 'daysOfWeek'),
@@ -312,38 +368,48 @@ void main() {
             reminderCount: any(named: 'reminderCount'),
             gridColor: any(named: 'gridColor'),
             includeInMorningReview: any(named: 'includeInMorningReview'),
-          )).called(1);
-      verify(() => mockLocalDataSource.deleteTask('local_123')).called(1);
-      verify(() => mockLocalDataSource.saveTask(remoteCreatedTask.copyWith(isUploaded: true))).called(1);
-    });
+          ),
+        ).called(1);
+        verify(() => mockLocalDataSource.deleteTask('local_123')).called(1);
+        verify(
+          () => mockLocalDataSource.saveTask(
+            remoteCreatedTask.copyWith(isUploaded: true),
+          ),
+        ).called(1);
+      },
+    );
 
-    test('when one task fails to upload: leaves it unsynced and continues', () async {
-      final taskFail = TaskModel(
-        id: 'local_fail',
-        userId: 'local_user',
-        name: 'Fail Habit',
-        createdAt: now,
-        isUploaded: false,
-      );
-      final taskSuccess = TaskModel(
-        id: 'local_ok',
-        userId: 'local_user',
-        name: 'OK Habit',
-        createdAt: now,
-        isUploaded: false,
-      );
-      final remoteSuccess = TaskModel(
-        id: 'remote_ok',
-        userId: 'u1',
-        name: 'OK Habit',
-        createdAt: now,
-        isUploaded: true,
-      );
+    test(
+      'when one task fails to upload: leaves it unsynced and continues',
+      () async {
+        final taskFail = TaskModel(
+          id: 'local_fail',
+          userId: 'local_user',
+          name: 'Fail Habit',
+          createdAt: now,
+          isUploaded: false,
+        );
+        final taskSuccess = TaskModel(
+          id: 'local_ok',
+          userId: 'local_user',
+          name: 'OK Habit',
+          createdAt: now,
+          isUploaded: false,
+        );
+        final remoteSuccess = TaskModel(
+          id: 'remote_ok',
+          userId: 'u1',
+          name: 'OK Habit',
+          createdAt: now,
+          isUploaded: true,
+        );
 
-      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockLocalDataSource.getUnsyncedTasks())
-          .thenAnswer((_) async => [taskFail, taskSuccess]);
-      when(() => mockRemoteDataSource.addTask(
+        when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
+        when(
+          () => mockLocalDataSource.getUnsyncedTasks(),
+        ).thenAnswer((_) async => [taskFail, taskSuccess]);
+        when(
+          () => mockRemoteDataSource.addTask(
             name: 'Fail Habit',
             frequencyType: any(named: 'frequencyType'),
             daysOfWeek: any(named: 'daysOfWeek'),
@@ -352,8 +418,10 @@ void main() {
             reminderCount: any(named: 'reminderCount'),
             gridColor: any(named: 'gridColor'),
             includeInMorningReview: any(named: 'includeInMorningReview'),
-          )).thenThrow(const ServerException(message: 'Network drop'));
-      when(() => mockRemoteDataSource.addTask(
+          ),
+        ).thenThrow(const ServerException(message: 'Network drop'));
+        when(
+          () => mockRemoteDataSource.addTask(
             name: 'OK Habit',
             frequencyType: any(named: 'frequencyType'),
             daysOfWeek: any(named: 'daysOfWeek'),
@@ -362,24 +430,32 @@ void main() {
             reminderCount: any(named: 'reminderCount'),
             gridColor: any(named: 'gridColor'),
             includeInMorningReview: any(named: 'includeInMorningReview'),
-          )).thenAnswer((_) async => remoteSuccess);
-      when(() => mockLocalDataSource.deleteTask('local_ok')).thenAnswer((_) async {});
-      when(() => mockLocalDataSource.saveTask(any())).thenAnswer((_) async {});
-      when(() => mockLocalDataSource.updateEntryTaskId(
+          ),
+        ).thenAnswer((_) async => remoteSuccess);
+        when(
+          () => mockLocalDataSource.deleteTask('local_ok'),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockLocalDataSource.saveTask(any()),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockLocalDataSource.updateEntryTaskId(
             oldTaskId: 'local_ok',
             newTaskId: 'remote_ok',
-          )).thenAnswer((_) async {});
+          ),
+        ).thenAnswer((_) async {});
 
-      final result = await repository.syncUnsyncedTasks();
+        final result = await repository.syncUnsyncedTasks();
 
-      expect(result.isRight(), isTrue);
-      final uploaded = result.getOrElse((_) => []);
-      expect(uploaded.length, 1);
-      expect(uploaded.first.id, 'remote_ok');
+        expect(result.isRight(), isTrue);
+        final uploaded = result.getOrElse((_) => []);
+        expect(uploaded.length, 1);
+        expect(uploaded.first.id, 'remote_ok');
 
-      // Only successful task's local temp record was deleted
-      verifyNever(() => mockLocalDataSource.deleteTask('local_fail'));
-      verify(() => mockLocalDataSource.deleteTask('local_ok')).called(1);
-    });
+        // Only successful task's local temp record was deleted
+        verifyNever(() => mockLocalDataSource.deleteTask('local_fail'));
+        verify(() => mockLocalDataSource.deleteTask('local_ok')).called(1);
+      },
+    );
   });
 }

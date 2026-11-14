@@ -47,8 +47,10 @@ class DashboardStore extends ChangeNotifier {
     onStatusChanged?.call(t, d, status);
   }
 
-  void toggleToday(TaskItem t) =>
-      setStatus(t, today, t.isCompletedToday ? null : EntryStatus.done);
+  void toggleToday(TaskItem t) {
+    if (!t.isDueToday) return;
+    setStatus(t, today, t.isCompletedToday ? null : EntryStatus.done);
+  }
 
   // ── Dashboard metrics ────────────────────────────────────────────────
 

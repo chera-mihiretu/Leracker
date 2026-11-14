@@ -54,6 +54,70 @@ void main() {
     test('isUploaded defaults to true', () {
       expect(task1.isUploaded, isTrue);
     });
+
+    test('isDueOn daily correctly checks daysOfWeek (1=Mon ... 7=Sun)', () {
+      final dailyTask = TaskEntity(
+        id: 't-daily',
+        userId: 'u1',
+        name: 'Gym',
+        createdAt: now,
+        frequencyType: 'daily',
+        daysOfWeek: const [1, 3, 5], // Mon, Wed, Fri
+      );
+
+      final monday = DateTime(2026, 11, 9); // weekday 1
+      final tuesday = DateTime(2026, 11, 10); // weekday 2
+      final wednesday = DateTime(2026, 11, 11); // weekday 3
+
+      expect(dailyTask.isDueOn(monday), isTrue);
+      expect(dailyTask.isDueOn(tuesday), isFalse);
+      expect(dailyTask.isDueOn(wednesday), isTrue);
+    });
+
+    test('isDueOn weekly checks chosen weekday', () {
+      final weeklyTask = TaskEntity(
+        id: 't-weekly',
+        userId: 'u1',
+        name: 'Sunday Long Run',
+        createdAt: now,
+        frequencyType: 'weekly',
+        daysOfWeek: const [7], // Sunday
+      );
+
+      final sunday = DateTime(2026, 11, 15); // weekday 7
+      final saturday = DateTime(2026, 11, 14); // weekday 6
+
+      expect(weeklyTask.isDueOn(sunday), isTrue);
+      expect(weeklyTask.isDueOn(saturday), isFalse);
+    });
+
+    test('isDueOn monthly evaluates start, end, and specific day rules', () {
+      final monthEndTask = TaskEntity(
+        id: 't-end',
+        userId: 'u1',
+        name: 'Month End Report',
+        createdAt: now,
+        frequencyType: 'monthly',
+        monthlyRule: 'end',
+      );
+
+      expect(monthEndTask.isDueOn(DateTime(2026, 2, 28)), isTrue);
+      expect(monthEndTask.isDueOn(DateTime(2026, 2, 27)), isFalse);
+      expect(monthEndTask.isDueOn(DateTime(2026, 4, 30)), isTrue);
+      expect(monthEndTask.isDueOn(DateTime(2026, 5, 31)), isTrue);
+
+      final monthDayTask = TaskEntity(
+        id: 't-day',
+        userId: 'u1',
+        name: 'Mid-Month Review',
+        createdAt: now,
+        frequencyType: 'monthly',
+        monthlyRule: '15',
+      );
+
+      expect(monthDayTask.isDueOn(DateTime(2026, 11, 15)), isTrue);
+      expect(monthDayTask.isDueOn(DateTime(2026, 11, 14)), isFalse);
+    });
   });
 }
 

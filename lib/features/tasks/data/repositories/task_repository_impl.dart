@@ -110,7 +110,9 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<Either<Failure, List<TaskEntryEntity>>> getTaskEntries(String taskId) async {
+  Future<Either<Failure, List<TaskEntryEntity>>> getTaskEntries(
+    String taskId,
+  ) async {
     try {
       if (await networkInfo.isConnected) {
         try {
@@ -131,7 +133,8 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<Either<Failure, Map<String, List<TaskEntryEntity>>>> getAllTaskEntries() async {
+  Future<Either<Failure, Map<String, List<TaskEntryEntity>>>>
+  getAllTaskEntries() async {
     try {
       if (await networkInfo.isConnected) {
         try {
@@ -235,4 +238,3 @@ class TaskRepositoryImpl implements TaskRepository {
     }
   }
 }
-

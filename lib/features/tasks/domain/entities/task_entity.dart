@@ -35,6 +35,28 @@ class TaskEntity extends Equatable {
   /// Alias for backward compatibility
   String get frequency => frequencyType;
 
+  /// Checks if the task is scheduled to be executed on a given [date].
+  bool isDueOn(DateTime date) {
+    switch (frequencyType) {
+      case 'daily':
+        return daysOfWeek.contains(date.weekday);
+      case 'weekly':
+        return daysOfWeek.contains(date.weekday);
+      case 'monthly':
+        final last = DateTime(date.year, date.month + 1, 0).day;
+        final target = monthlyRule == 'end'
+            ? last
+            : (monthlyRule == null || monthlyRule == 'start'
+                ? 1
+                : (int.tryParse(monthlyRule!) ?? 1).clamp(1, last));
+        return date.day == target;
+      default:
+        return true;
+    }
+  }
+
+  bool get isDueToday => isDueOn(DateTime.now());
+
   TaskEntity copyWith({
     String? id,
     String? userId,

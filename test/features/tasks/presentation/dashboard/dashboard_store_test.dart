@@ -296,6 +296,64 @@ void main() {
       expect(capturedStatus, isNull);
     });
 
+    test('toggleToday toggles completion only when task is due today', () {
+      final dueTask = TaskItem(
+        id: 'due',
+        name: 'Due Habit',
+        gridColor: const Color(0xFF22C55E),
+        daysOfWeek: {today.weekday - 1},
+      );
+      final notDueTask = TaskItem(
+        id: 'not-due',
+        name: 'Not Due Habit',
+        gridColor: const Color(0xFF22C55E),
+        daysOfWeek: {(today.weekday + 2) % 7},
+      );
+
+      final store = DashboardStore(tasks: [dueTask, notDueTask]);
+
+      // Toggling task that is due today marks it done
+      store.toggleToday(dueTask);
+      expect(dueTask.isCompletedToday, isTrue);
+
+      // Toggling again clears it
+      store.toggleToday(dueTask);
+      expect(dueTask.isCompletedToday, isFalse);
+
+      // Toggling task that is not due today does NOT mark it done
+      store.toggleToday(notDueTask);
+      expect(notDueTask.isCompletedToday, isFalse);
+    });
+
+    test('toReview includes only tasks scheduled on yesterday', () {
+      final yesterday = addDays(today, -1);
+      final scheduledYesterday = TaskItem(
+        id: 'y-sched',
+        name: 'Scheduled Yesterday',
+        gridColor: const Color(0xFF22C55E),
+        daysOfWeek: {yesterday.weekday - 1},
+        includeInMorningReview: true,
+        createdAt: addDays(today, -10),
+      );
+
+      final notScheduledYesterday = TaskItem(
+        id: 'y-not-sched',
+        name: 'Not Scheduled Yesterday',
+        gridColor: const Color(0xFF8B5CF6),
+        daysOfWeek: {(yesterday.weekday + 3) % 7},
+        includeInMorningReview: true,
+        createdAt: addDays(today, -10),
+      );
+
+      final store = DashboardStore(
+        tasks: [scheduledYesterday, notScheduledYesterday],
+      );
+
+      final reviewItems = store.toReview;
+      expect(reviewItems.length, 1);
+      expect(reviewItems.first.id, 'y-sched');
+    });
+
     test('dueToday and doneToday count accurately', () {
       final dueAndDone = TaskItem(
         id: 'd1',

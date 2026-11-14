@@ -205,4 +205,141 @@ void main() {
 
     expect(selectedStatus, EntryStatus.done);
   });
+
+  testWidgets(
+      'showCellSheet on today displays read-only info when task is not scheduled today',
+      (tester) async {
+    final task = TaskItem(
+      id: 'not-due-task',
+      name: 'Other Day Habit',
+      gridColor: const Color(0xFF22C55E),
+      daysOfWeek: {(today.weekday + 2) % 7}, // not scheduled today
+      createdAt: addDays(today, -10),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DashTheme(
+            palette: DashPalette.dark,
+            child: Builder(builder: (context) {
+              return TextButton(
+                onPressed: () => showCellSheet(
+                  context: context,
+                  task: task,
+                  day: today,
+                  onSet: (_) {},
+                ),
+                child: const Text('Open Sheet'),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open Sheet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Other Day Habit'), findsOneWidget);
+    expect(find.text('Status: Not scheduled'), findsOneWidget);
+    expect(find.text('This task is not scheduled for today'), findsOneWidget);
+
+    // Edit options should NOT exist
+    expect(find.text('Done'), findsNothing);
+    expect(find.text('Missed'), findsNothing);
+    expect(find.text('Reset'), findsNothing);
+  });
+
+  testWidgets(
+      'Heatmap dropdown shows multiple years when task createdAt is in 2026 and currentDate is in 2027',
+      (tester) async {
+    final task2026 = TaskItem(
+      id: 'h2026',
+      name: '2026 Habit',
+      gridColor: const Color(0xFF22C55E),
+      createdAt: DateTime(2026, 10, 14),
+    );
+    final simulated2027 = DateTime(2027, 4, 15);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DashTheme(
+            palette: DashPalette.dark,
+            child: Heatmap(
+              task: task2026,
+              currentDate: simulated2027,
+              onCellTap: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final yearSelector = find.byKey(const Key('heatmap_year_selector'));
+    expect(yearSelector, findsOneWidget);
+
+    // Tap dropdown to view year options
+    await tester.tap(yearSelector);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Verify 2026 and 2027 options are listed
+    expect(find.widgetWithText(DropdownMenuItem<int>, '2026'), findsOneWidget);
+    expect(find.widgetWithText(DropdownMenuItem<int>, '2027'), findsWidgets);
+
+    // Select 2026
+    await tester.tap(find.widgetWithText(DropdownMenuItem<int>, '2026'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Year selector now displays 2026
+    final dropdown = tester.widget<DropdownButton<int>>(yearSelector);
+    expect(dropdown.value, 2026);
+  });
+
+  testWidgets('Heatmap ignores taps on dates prior to task.createdAt',
+      (tester) async {
+    // Nov 11, 2026 is Wednesday (weekday 3, row index 2 in 0-indexed Mon-Sun).
+    // Monday Nov 9 (row 0) and Tuesday Nov 10 (row 1) are before task createdAt.
+    final taskCreatedWed = TaskItem(
+      id: 'h-wed',
+      name: 'Wednesday Habit',
+      gridColor: const Color(0xFF22C55E),
+      createdAt: DateTime(2026, 11, 11),
+    );
+    final simulatedToday = DateTime(2026, 11, 14); // Saturday
+
+    DateTime? tappedDay;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DashTheme(
+            palette: DashPalette.dark,
+            child: Heatmap(
+              task: taskCreatedWed,
+              currentDate: simulatedToday,
+              onCellTap: (d) => tappedDay = d,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Find CustomPaint inside Heatmap
+    final customPaint = find.byType(CustomPaint).last;
+
+    // Row 0 (Monday Nov 9, before createdAt): step is 16px (13 + 3)
+    // Tap at dx: 8 (col 0), dy: 8 (row 0)
+    await tester.tapAt(tester.getTopLeft(customPaint) + const Offset(8, 8));
+    await tester.pump();
+    expect(tappedDay, isNull);
+
+    // Row 2 (Wednesday Nov 11, on createdAt): dy = 2 * 16 + 8 = 40
+    await tester.tapAt(tester.getTopLeft(customPaint) + const Offset(8, 40));
+    await tester.pump();
+    expect(tappedDay, DateTime(2026, 11, 11));
+  });
 }

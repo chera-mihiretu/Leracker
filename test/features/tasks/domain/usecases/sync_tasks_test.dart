@@ -26,21 +26,26 @@ void main() {
     isUploaded: true,
   );
 
-  test('calls syncUnsyncedTasks and returns uploaded tasks on success', () async {
-    when(() => mockRepository.syncUnsyncedTasks())
-        .thenAnswer((_) async => Right([testTask]));
+  test(
+    'calls syncUnsyncedTasks and returns uploaded tasks on success',
+    () async {
+      when(
+        () => mockRepository.syncUnsyncedTasks(),
+      ).thenAnswer((_) async => Right([testTask]));
 
-    final result = await useCase(const NoParams());
+      final result = await useCase(const NoParams());
 
-    expect(result.isRight(), isTrue);
-    expect(result.getOrElse((_) => []), equals([testTask]));
-    verify(() => mockRepository.syncUnsyncedTasks()).called(1);
-  });
+      expect(result.isRight(), isTrue);
+      expect(result.getOrElse((_) => []), equals([testTask]));
+      verify(() => mockRepository.syncUnsyncedTasks()).called(1);
+    },
+  );
 
   test('returns failure when repository fails', () async {
     const failure = ServerFailure(message: 'Sync failed');
-    when(() => mockRepository.syncUnsyncedTasks())
-        .thenAnswer((_) async => const Left(failure));
+    when(
+      () => mockRepository.syncUnsyncedTasks(),
+    ).thenAnswer((_) async => const Left(failure));
 
     final result = await useCase(const NoParams());
 

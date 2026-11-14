@@ -10,7 +10,7 @@ void main() {
     id: 't1',
     userId: 'u1',
     name: 'Morning Run',
-    createdAt: now,
+    createdAt: now.subtract(const Duration(days: 30)),
   );
 
   testWidgets('renders task name and GreenGrid only', (tester) async {
@@ -43,9 +43,12 @@ void main() {
       ),
     );
 
-    // Tap a past cell in the GreenGrid (first cell is 34 days ago)
-    final cells = find.byType(GestureDetector);
-    await tester.tap(cells.first);
+    // Tap a past cell in the GreenGrid (yesterday)
+    final yesterday = now.subtract(const Duration(days: 1));
+    final pastCell = find.byKey(ValueKey(
+      'green_grid_cell_${yesterday.year}_${yesterday.month}_${yesterday.day}',
+    ));
+    await tester.tap(pastCell);
     await tester.pumpAndSettle();
 
     // Read-only indicator should appear
@@ -74,9 +77,12 @@ void main() {
       ),
     );
 
-    // Tap today cell in the GreenGrid (last cell)
-    final cells = find.byType(GestureDetector);
-    await tester.tap(cells.last);
+    // Tap today cell in the GreenGrid
+    final today = DateTime(now.year, now.month, now.day);
+    final todayCell = find.byKey(ValueKey(
+      'green_grid_cell_${today.year}_${today.month}_${today.day}',
+    ));
+    await tester.tap(todayCell);
     await tester.pumpAndSettle();
 
     // Bottom sheet should open with Done and Missed buttons for today
@@ -88,5 +94,41 @@ void main() {
 
     expect(chosenStatus, 'done');
     expect(chosenDate, isNotNull);
+  });
+
+  testWidgets('tapping today cell shows read-only message when task is not scheduled for today', (tester) async {
+    final notDueTask = TaskEntity(
+      id: 't-not-due',
+      userId: 'u1',
+      name: 'Weekend Run',
+      createdAt: now,
+      frequencyType: 'daily',
+      daysOfWeek: [(now.weekday % 7) + 1], // different day of the week
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TaskCard(
+            task: notDueTask,
+            entries: const [],
+            onSetStatus: (date, status) {},
+          ),
+        ),
+      ),
+    );
+
+    // Tap today cell in the GreenGrid
+    final today = DateTime(now.year, now.month, now.day);
+    final todayCell = find.byKey(ValueKey(
+      'green_grid_cell_${today.year}_${today.month}_${today.day}',
+    ));
+    await tester.tap(todayCell);
+    await tester.pumpAndSettle();
+
+    // Bottom sheet should show read-only info and NOT show Done/Missed
+    expect(find.text('This task is not scheduled for today'), findsOneWidget);
+    expect(find.text('Done'), findsNothing);
+    expect(find.text('Missed'), findsNothing);
   });
 }

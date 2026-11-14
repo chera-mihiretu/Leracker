@@ -51,6 +51,8 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       return (response as List<dynamic>)
           .map((item) => TaskModel.fromJson(item as Map<String, dynamic>))
           .toList();
+    } on ServerException {
+      rethrow;
     } catch (e) {
       throw ServerException(message: e.toString());
     }
@@ -111,6 +113,8 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
           includeInMorningReview: includeInMorningReview,
         );
       }
+    } on ServerException {
+      rethrow;
     } catch (e) {
       throw ServerException(message: e.toString());
     }
@@ -123,6 +127,8 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
           .from('tasks')
           .update({'archived': true})
           .eq('id', taskId);
+    } on ServerException {
+      rethrow;
     } catch (e) {
       throw ServerException(message: e.toString());
     }
@@ -140,6 +146,8 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       return (response as List<dynamic>)
           .map((item) => TaskEntryModel.fromJson(item as Map<String, dynamic>))
           .toList();
+    } on ServerException {
+      rethrow;
     } catch (e) {
       throw ServerException(message: e.toString());
     }
@@ -156,6 +164,8 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       return (response as List<dynamic>)
           .map((item) => TaskEntryModel.fromJson(item as Map<String, dynamic>))
           .toList();
+    } on ServerException {
+      rethrow;
     } catch (e) {
       throw ServerException(message: e.toString());
     }
@@ -187,6 +197,8 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
           .single();
 
       return TaskEntryModel.fromJson(response);
+    } on ServerException {
+      rethrow;
     } catch (e) {
       throw ServerException(message: e.toString());
     }

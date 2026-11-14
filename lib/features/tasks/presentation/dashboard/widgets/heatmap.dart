@@ -14,7 +14,9 @@ class Heatmap extends StatefulWidget {
     required this.task,
     required this.onCellTap,
     this.bloomTick = 0,
-    this.weeks = 26,
+    this.weeks,
+    this.currentDate,
+    this.initialYear,
   });
 
   final TaskItem task;
@@ -23,8 +25,11 @@ class Heatmap extends StatefulWidget {
   /// Increment to play the "today" bloom (after a one-tap check).
   final int bloomTick;
 
-  /// Columns of history. 13 ≈ 90 days; the default scrolls back ~6 months.
-  final int weeks;
+  /// Optional fixed columns override (defaults to weeks calculated from start date to today).
+  final int? weeks;
+
+  final DateTime? currentDate;
+  final int? initialYear;
 
   static const cell = 13.0, gap = 3.0, step = cell + gap;
 
@@ -40,9 +45,46 @@ class _HeatmapState extends State<Heatmap> with TickerProviderStateMixin {
   late final AnimationController _bloom =
       AnimationController(vsync: this, duration: Motion.ms(650), value: 1);
 
+  late int _selectedYear;
+
+  DateTime get _today => dateOnly(widget.currentDate ?? DateTime.now());
+  DateTime get _taskStartDate => dateOnly(widget.task.createdAt);
+
+  List<int> get _availableYears {
+    final startYear = _taskStartDate.year;
+    final endYear = _today.year;
+    if (startYear >= endYear) return [startYear];
+    return [for (var y = startYear; y <= endYear; y++) y];
+  }
+
+  DateTime get _mondayOfStartWeek {
+    if (_selectedYear == _taskStartDate.year) {
+      return addDays(_taskStartDate, -(_taskStartDate.weekday - 1));
+    }
+    final jan1 = DateTime(_selectedYear, 1, 1);
+    return addDays(jan1, -(jan1.weekday - 1));
+  }
+
+  DateTime get _endOfRange {
+    if (_selectedYear == _today.year) {
+      return _today;
+    }
+    return DateTime(_selectedYear, 12, 31);
+  }
+
+  int get _calculatedWeeks {
+    if (widget.weeks != null) return widget.weeks!;
+    final daysCount = _endOfRange.difference(_mondayOfStartWeek).inDays + 1;
+    return math.max(1, (daysCount / 7).ceil());
+  }
+
   @override
   void initState() {
     super.initState();
+    _selectedYear = widget.initialYear ?? _today.year;
+    if (!_availableYears.contains(_selectedYear)) {
+      _selectedYear = _availableYears.last;
+    }
     // Snap to "today" so the latest progress is visible immediately.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent);
@@ -53,6 +95,9 @@ class _HeatmapState extends State<Heatmap> with TickerProviderStateMixin {
   void didUpdateWidget(covariant Heatmap old) {
     super.didUpdateWidget(old);
     if (widget.bloomTick != old.bloomTick) _bloom.forward(from: 0);
+    if (!_availableYears.contains(_selectedYear)) {
+      _selectedYear = _availableYears.last;
+    }
   }
 
   @override
@@ -63,61 +108,107 @@ class _HeatmapState extends State<Heatmap> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  DateTime get _today => dateOnly(DateTime.now());
-
-  /// Monday of the first column.
-  DateTime get _start =>
-      addDays(_today, -(_today.weekday - 1) - 7 * (widget.weeks - 1));
-
   void _tap(Offset p) {
     final col = (p.dx / Heatmap.step).floor();
     final row = (p.dy / Heatmap.step).floor();
-    if (col < 0 || col >= widget.weeks || row < 0 || row > 6) return;
-    final day = addDays(_start, col * 7 + row);
-    if (day.isAfter(_today)) return;
+    final weeks = _calculatedWeeks;
+    if (col < 0 || col >= weeks || row < 0 || row > 6) return;
+    final day = addDays(_mondayOfStartWeek, col * 7 + row);
+    if (day.isBefore(_taskStartDate) ||
+        day.year != _selectedYear ||
+        day.isAfter(_today)) {
+      return;
+    }
     widget.onCellTap(day);
   }
 
   @override
   Widget build(BuildContext context) {
     final p = DashTheme.of(context);
-    final w = widget.weeks * Heatmap.step - Heatmap.gap;
+    final weeks = _calculatedWeeks;
+    final w = weeks * Heatmap.step - Heatmap.gap;
     const h = 7 * Heatmap.step - Heatmap.gap;
-    return SizedBox(
-      height: h,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _DayLabelsColumn(palette: p),
-          const SizedBox(width: 8),
-          Expanded(
-            child: SingleChildScrollView(
-              controller: _scroll,
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: GestureDetector(
-                onTapUp: (d) => _tap(d.localPosition),
-                child: AnimatedBuilder(
-                  animation: Listenable.merge([_pulse, _bloom]),
-                  builder: (context, _) => CustomPaint(
-                    size: Size(w, h),
-                    painter: _HeatmapPainter(
-                      task: widget.task,
-                      start: _start,
-                      today: _today,
-                      weeks: widget.weeks,
-                      palette: p,
-                      pulse: _pulse.value,
-                      bloom: _bloom.value,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                key: const Key('heatmap_year_selector'),
+                value: _selectedYear,
+                isDense: true,
+                icon: Icon(Icons.arrow_drop_down, size: 18, color: p.textMuted),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: p.text,
+                ),
+                dropdownColor: p.card,
+                items: _availableYears.map((y) {
+                  return DropdownMenuItem<int>(
+                    value: y,
+                    child: Text('$y'),
+                  );
+                }).toList(),
+                onChanged: (y) {
+                  if (y != null) {
+                    setState(() {
+                      _selectedYear = y;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_scroll.hasClients) {
+                          _scroll.jumpTo(_scroll.position.maxScrollExtent);
+                        }
+                      });
+                    });
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: h,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _DayLabelsColumn(palette: p),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _scroll,
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: GestureDetector(
+                    onTapUp: (d) => _tap(d.localPosition),
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge([_pulse, _bloom]),
+                      builder: (context, _) => CustomPaint(
+                        size: Size(w, h),
+                        painter: _HeatmapPainter(
+                          task: widget.task,
+                          start: _mondayOfStartWeek,
+                          today: _today,
+                          taskStartDate: _taskStartDate,
+                          selectedYear: _selectedYear,
+                          weeks: weeks,
+                          palette: p,
+                          pulse: _pulse.value,
+                          bloom: _bloom.value,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -163,6 +254,8 @@ class _HeatmapPainter extends CustomPainter {
     required this.task,
     required this.start,
     required this.today,
+    required this.taskStartDate,
+    required this.selectedYear,
     required this.weeks,
     required this.palette,
     required this.pulse,
@@ -170,7 +263,8 @@ class _HeatmapPainter extends CustomPainter {
   });
 
   final TaskItem task;
-  final DateTime start, today;
+  final DateTime start, today, taskStartDate;
+  final int selectedYear;
   final int weeks;
   final DashPalette palette;
   final double pulse, bloom;
@@ -188,6 +282,14 @@ class _HeatmapPainter extends CustomPainter {
     for (var col = 0; col < weeks; col++) {
       for (var row = 0; row < 7; row++) {
         final day = addDays(start, col * 7 + row);
+        // There should NOT be any grid cell before task was created,
+        // or outside the selected year, or after today.
+        if (day.isBefore(taskStartDate) ||
+            day.year != selectedYear ||
+            day.isAfter(today)) {
+          continue;
+        }
+
         final state = task.cellState(day, today);
         if (state == CellState.future) continue;
         final rect = Rect.fromLTWH(col * st, row * st, c, c);
@@ -367,6 +469,94 @@ Future<void> showCellSheet({
                             const SizedBox(height: 2),
                             Text(
                               'Past entries cannot be edited',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: p.textFaint,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (!task.isDueOn(day))
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: p.isDark ? p.bg : p.rest,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: p.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.event_busy_rounded,
+                        size: 20,
+                        color: p.textMuted,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: p.text,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'This task is not scheduled for today',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: p.textFaint,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (!task.isDueOn(day))
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: p.isDark ? p.bg : p.rest,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: p.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.event_busy_rounded,
+                        size: 20,
+                        color: p.textMuted,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: p.text,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'This task is not scheduled for today',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: p.textFaint,

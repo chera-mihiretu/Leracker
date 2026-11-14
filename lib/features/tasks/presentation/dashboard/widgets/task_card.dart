@@ -9,9 +9,15 @@ import '../task_item.dart';
 import 'heatmap.dart';
 
 class DashTaskCard extends StatefulWidget {
-  const DashTaskCard({super.key, required this.task, required this.store});
+  const DashTaskCard({
+    super.key,
+    required this.task,
+    required this.store,
+    this.currentDate,
+  });
   final TaskItem task;
   final DashboardStore store;
+  final DateTime? currentDate;
 
   @override
   State<DashTaskCard> createState() => _DashTaskCardState();
@@ -98,6 +104,7 @@ class _DashTaskCardState extends State<DashTaskCard> {
           Heatmap(
             task: t,
             bloomTick: _bloom,
+            currentDate: widget.currentDate,
             onCellTap: (day) => showCellSheet(
               context: context,
               task: t,
