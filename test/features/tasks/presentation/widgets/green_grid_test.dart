@@ -27,7 +27,7 @@ void main() {
     ),
   ];
 
-  testWidgets('renders grid cells for the given range', (tester) async {
+  testWidgets('renders grid cells and M, T, W, T, F, S, S row labels', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -38,6 +38,13 @@ void main() {
         ),
       ),
     );
+
+    // Should find day labels: M, T, W, F, S
+    expect(find.text('M'), findsOneWidget);
+    expect(find.text('T'), findsNWidgets(2)); // Tuesday and Thursday
+    expect(find.text('W'), findsOneWidget);
+    expect(find.text('F'), findsOneWidget);
+    expect(find.text('S'), findsNWidgets(2)); // Saturday and Sunday
 
     // Should find containers for the cells
     expect(find.byType(GestureDetector), findsWidgets);
@@ -69,4 +76,3 @@ void main() {
     expect(tappedDate?.day, today.day);
   });
 }
-

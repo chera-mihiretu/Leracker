@@ -85,29 +85,75 @@ class _HeatmapState extends State<Heatmap> with TickerProviderStateMixin {
     const h = 7 * Heatmap.step - Heatmap.gap;
     return SizedBox(
       height: h,
-      child: SingleChildScrollView(
-        controller: _scroll,
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: GestureDetector(
-          onTapUp: (d) => _tap(d.localPosition),
-          child: AnimatedBuilder(
-            animation: Listenable.merge([_pulse, _bloom]),
-            builder: (context, _) => CustomPaint(
-              size: Size(w, h),
-              painter: _HeatmapPainter(
-                task: widget.task,
-                start: _start,
-                today: _today,
-                weeks: widget.weeks,
-                palette: p,
-                pulse: _pulse.value,
-                bloom: _bloom.value,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _DayLabelsColumn(palette: p),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scroll,
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: GestureDetector(
+                onTapUp: (d) => _tap(d.localPosition),
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([_pulse, _bloom]),
+                  builder: (context, _) => CustomPaint(
+                    size: Size(w, h),
+                    painter: _HeatmapPainter(
+                      task: widget.task,
+                      start: _start,
+                      today: _today,
+                      weeks: widget.weeks,
+                      palette: p,
+                      pulse: _pulse.value,
+                      bloom: _bloom.value,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
+    );
+  }
+}
+
+class _DayLabelsColumn extends StatelessWidget {
+  const _DayLabelsColumn({required this.palette});
+  final DashPalette palette;
+
+  static const _labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        for (var i = 0; i < 7; i++) ...[
+          SizedBox(
+            height: Heatmap.cell,
+            width: 12,
+            child: Center(
+              child: Text(
+                _labels[i],
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                  color: palette.textFaint,
+                  height: 1.0,
+                ),
+              ),
+            ),
+          ),
+          if (i < 6) const SizedBox(height: Heatmap.gap),
+        ],
+      ],
     );
   }
 }
@@ -273,7 +319,7 @@ Future<void> showCellSheet({
               Text(task.name,
                   style: TextStyle(fontSize: 13, color: p.textMuted)),
               const SizedBox(height: 2),
-              Text(longDate(day),
+              Text(weekdayLongDate(day),
                   style: TextStyle(
                       fontSize: 20, fontWeight: FontWeight.w600, color: p.text)),
               const SizedBox(height: 4),

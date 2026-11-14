@@ -13,15 +13,18 @@ class GreenGrid extends StatelessWidget {
     this.onDayTap,
   });
 
+  static const cell = 13.0;
+  static const gap = 3.0;
+  static const _labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    // Create list of dates from (today - daysToShow + 1) to today
-    final dates = List.generate(daysToShow, (i) {
-      return today.subtract(Duration(days: daysToShow - 1 - i));
-    });
+    final weeks = (daysToShow / 7).ceil();
+    final start =
+        today.subtract(Duration(days: (today.weekday - 1) + 7 * (weeks - 1)));
 
     final entryMap = <String, TaskEntryEntity>{};
     for (final e in entries) {
@@ -30,54 +33,122 @@ class GreenGrid extends StatelessWidget {
       entryMap[key] = e;
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
+    const h = 7 * (cell + gap) - gap;
+
+    return SizedBox(
+      height: h,
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: dates.map((date) {
-          final key =
-              '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-          final entry = entryMap[key];
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Day labels column
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var r = 0; r < 7; r++) ...[
+                SizedBox(
+                  height: cell,
+                  width: 14,
+                  child: Center(
+                    child: Text(
+                      _labels[r],
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withValues(alpha: 0.7),
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+                if (r < 6) const SizedBox(height: gap),
+              ],
+            ],
+          ),
+          const SizedBox(width: 8),
+          // 7xN matrix
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(weeks, (col) {
+                  return Padding(
+                    padding: EdgeInsets.only(right: col < weeks - 1 ? gap : 0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(7, (row) {
+                        final date = start.add(Duration(days: col * 7 + row));
+                        final isFuture = date.isAfter(today);
+                        if (isFuture) {
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: row < 6 ? gap : 0),
+                            child: const SizedBox(width: cell, height: cell),
+                          );
+                        }
 
-          Color cellColor;
-          Border? cellBorder;
+                        final key =
+                            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                        final entry = entryMap[key];
 
-          if (entry != null && entry.isDone) {
-            cellColor = Colors.green.shade600;
-          } else if (entry != null && entry.isMissed) {
-            cellColor = Colors.grey.shade400;
-          } else {
-            cellColor = Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4);
-            cellBorder = Border.all(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-              width: 0.5,
-            );
-          }
+                        Color cellColor;
+                        Border? cellBorder;
 
-          final isCurrentDay = date.year == today.year &&
-              date.month == today.month &&
-              date.day == today.day;
+                        if (entry != null && entry.isDone) {
+                          cellColor = Colors.green.shade600;
+                        } else if (entry != null && entry.isMissed) {
+                          cellColor = Colors.grey.shade400;
+                        } else {
+                          cellColor = Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.4);
+                          cellBorder = Border.all(
+                            color: Theme.of(context)
+                                .dividerColor
+                                .withValues(alpha: 0.2),
+                            width: 0.5,
+                          );
+                        }
 
-          return GestureDetector(
-            onTap: onDayTap != null ? () => onDayTap!(date) : null,
-            child: Container(
-              width: 14,
-              height: 14,
-              margin: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 2),
-              decoration: BoxDecoration(
-                color: cellColor,
-                borderRadius: BorderRadius.circular(3),
-                border: cellBorder ??
-                    (isCurrentDay
-                        ? Border.all(color: Colors.green.shade800, width: 1.2)
-                        : null),
+                        final isCurrentDay = date.year == today.year &&
+                            date.month == today.month &&
+                            date.day == today.day;
+
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: row < 6 ? gap : 0),
+                          child: GestureDetector(
+                            onTap:
+                                onDayTap != null ? () => onDayTap!(date) : null,
+                            child: Container(
+                              width: cell,
+                              height: cell,
+                              decoration: BoxDecoration(
+                                color: cellColor,
+                                borderRadius: BorderRadius.circular(3),
+                                border: cellBorder ??
+                                    (isCurrentDay
+                                        ? Border.all(
+                                            color: Colors.green.shade800,
+                                            width: 1.2)
+                                        : null),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  );
+                }),
               ),
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }
 }
-

@@ -21,12 +21,14 @@ class DashboardScreen extends StatefulWidget {
     super.key,
     required this.store,
     this.userInitials = 'AB',
+    this.userAvatarUrl,
     this.onSignOut,
     this.onDraftCreated,
   });
 
   final DashboardStore store;
   final String userInitials;
+  final String? userAvatarUrl;
   final VoidCallback? onSignOut;
   final void Function(TaskDraft draft)? onDraftCreated;
 
@@ -114,6 +116,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: DashHeader(
                         store: store,
                         userInitials: widget.userInitials,
+                        userAvatarUrl: widget.userAvatarUrl,
                         onSignOut: widget.onSignOut,
                         onReview: () => openMorningReview(context, store),
                       ),

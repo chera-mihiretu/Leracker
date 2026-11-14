@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:progress_tracker/features/auth/domain/entities/user_entity.dart';
 import 'package:progress_tracker/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:progress_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:progress_tracker/features/auth/presentation/bloc/auth_state.dart';
@@ -11,6 +12,7 @@ import 'package:progress_tracker/features/tasks/presentation/bloc/tasks_bloc.dar
 import 'package:progress_tracker/features/tasks/presentation/bloc/tasks_event.dart';
 import 'package:progress_tracker/features/tasks/presentation/bloc/tasks_state.dart';
 import 'package:progress_tracker/features/tasks/presentation/dashboard/dashboard_screen.dart';
+import 'package:progress_tracker/features/tasks/presentation/dashboard/widgets/header.dart';
 import 'package:progress_tracker/features/tasks/presentation/dashboard/widgets/hero_pulse.dart';
 import 'package:progress_tracker/features/tasks/presentation/dashboard/widgets/task_card.dart';
 import 'package:progress_tracker/features/tasks/presentation/dashboard/widgets/zero_state.dart';
@@ -154,6 +156,54 @@ void main() {
     final avatar = find.text('PT');
     expect(avatar, findsOneWidget);
     await tester.tap(avatar);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Dark mode'), findsOneWidget);
+    expect(find.text('Sign out'), findsOneWidget);
+
+    await tester.tap(find.text('Sign out'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    verify(() => mockAuthBloc.add(const SignOutRequested())).called(1);
+  });
+
+  testWidgets(
+      'loads Google avatar for authenticated user and opens profile sheet',
+      (tester) async {
+    const googleUser = UserEntity(
+      id: 'google-sub-114254638465006499920',
+      email: 'cheramihiretu@gmail.com',
+      displayName: 'Chera Mihiretu',
+      avatarUrl:
+          'https://lh3.googleusercontent.com/a/ACg8ocKgmpmOW-qSH90SR-Ao1JiHawppNGwM7yZx21ohBKctOzvi1rA=s96-c',
+    );
+
+    when(() => mockAuthBloc.state).thenReturn(const Authenticated(googleUser));
+    when(() => mockTasksBloc.state).thenReturn(const TasksLoaded(
+      tasks: [],
+      entriesByTaskId: {},
+    ));
+
+    await tester.pumpWidget(buildWidget());
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verify avatar loaded with Google image URL
+    final avatarFinder = find.byType(DashAvatar);
+    expect(avatarFinder, findsOneWidget);
+    final avatarWidget = tester.widget<DashAvatar>(avatarFinder);
+    expect(avatarWidget.avatarUrl, googleUser.avatarUrl);
+    expect(avatarWidget.initials, 'CM');
+
+    final imageFinder = find.byType(Image);
+    expect(imageFinder, findsOneWidget);
+    final imageWidget = tester.widget<Image>(imageFinder);
+    expect(imageWidget.image, isA<NetworkImage>());
+    expect((imageWidget.image as NetworkImage).url, googleUser.avatarUrl);
+
+    // Tapping avatar opens profile sheet
+    await tester.tap(avatarFinder);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 

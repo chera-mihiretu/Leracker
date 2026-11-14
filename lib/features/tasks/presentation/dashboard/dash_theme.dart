@@ -75,6 +75,10 @@ String headerDate(DateTime d) =>
 /// "Oct 28, 2026"
 String longDate(DateTime d) => '${_months[d.month - 1]} ${d.day}, ${d.year}';
 
+/// "Wednesday, Oct 28, 2026"
+String weekdayLongDate(DateTime d) =>
+    '${_weekdays[d.weekday - 1]}, ${_months[d.month - 1]} ${d.day}, ${d.year}';
+
 /// "Fri, Nov 13"
 String shortDate(DateTime d) =>
     '${_weekdays[d.weekday - 1].substring(0, 3)}, ${_months[d.month - 1]} ${d.day}';

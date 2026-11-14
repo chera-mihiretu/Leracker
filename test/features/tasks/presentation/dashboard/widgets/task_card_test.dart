@@ -51,6 +51,13 @@ void main() {
     expect(find.text('5d'), findsOneWidget);
     expect(find.byType(Heatmap), findsOneWidget);
     expect(find.byType(QuickCheck), findsOneWidget);
+
+    // M, T, W, T, F, S, S row labels
+    expect(find.text('M'), findsOneWidget);
+    expect(find.text('T'), findsNWidgets(2));
+    expect(find.text('W'), findsOneWidget);
+    expect(find.text('F'), findsOneWidget);
+    expect(find.text('S'), findsNWidgets(2));
   });
 
   testWidgets('QuickCheck tap toggles today status when task is due today',

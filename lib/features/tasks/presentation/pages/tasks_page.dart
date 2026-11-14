@@ -163,9 +163,18 @@ class _TasksPageState extends State<TasksPage> {
     return 'PT';
   }
 
+  String? _getUserAvatarUrl(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    if (authState is Authenticated) {
+      return authState.user.avatarUrl;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final initials = _getUserInitials(context);
+    final avatarUrl = _getUserAvatarUrl(context);
 
     return BlocConsumer<TasksBloc, TasksState>(
       listener: (context, state) {
@@ -208,6 +217,7 @@ class _TasksPageState extends State<TasksPage> {
         return DashboardScreen(
           store: _store,
           userInitials: initials,
+          userAvatarUrl: avatarUrl,
           onSignOut: _handleSignOut,
           onDraftCreated: _handleDraftCreated,
         );

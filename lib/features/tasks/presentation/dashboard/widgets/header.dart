@@ -14,12 +14,14 @@ class DashHeader extends StatelessWidget {
     required this.store,
     required this.onReview,
     this.userInitials = 'AB',
+    this.userAvatarUrl,
     this.onSignOut,
   });
 
   final DashboardStore store;
   final VoidCallback onReview;
   final String userInitials;
+  final String? userAvatarUrl;
   final VoidCallback? onSignOut;
 
   @override
@@ -69,23 +71,39 @@ class DashHeader extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         GestureDetector(
-          onTap: () => showProfileSheet(context, store, userInitials, onSignOut),
-          child: _Avatar(initials: userInitials),
+          onTap: () => showProfileSheet(
+            context,
+            store,
+            userInitials,
+            onSignOut,
+            avatarUrl: userAvatarUrl,
+          ),
+          child: DashAvatar(
+            initials: userInitials,
+            avatarUrl: userAvatarUrl,
+          ),
         ),
       ],
     );
   }
 }
 
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.initials, this.size = 38});
+class DashAvatar extends StatelessWidget {
+  const DashAvatar({
+    super.key,
+    required this.initials,
+    this.avatarUrl,
+    this.size = 38,
+  });
+
   final String initials;
+  final String? avatarUrl;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final p = DashTheme.of(context);
-    return Container(
+    final fallback = Container(
       width: size,
       height: size,
       alignment: Alignment.center,
@@ -94,11 +112,43 @@ class _Avatar extends StatelessWidget {
         color: DashPalette.emerald.withAlpha(36),
         border: Border.all(color: p.border),
       ),
-      child: Text(initials,
-          style: TextStyle(
-              fontSize: size * 0.36,
-              fontWeight: FontWeight.w600,
-              color: DashPalette.emerald)),
+      child: Text(
+        initials,
+        style: TextStyle(
+          fontSize: size * 0.36,
+          fontWeight: FontWeight.w600,
+          color: DashPalette.emerald,
+        ),
+      ),
+    );
+
+    final url = avatarUrl?.trim();
+    if (url == null || url.isEmpty) {
+      return fallback;
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: p.border),
+      ),
+      child: ClipOval(
+        child: Image.network(
+          url,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => fallback,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded || frame != null) {
+              return child;
+            }
+            return fallback;
+          },
+        ),
+      ),
     );
   }
 }
@@ -184,7 +234,7 @@ class _ReviewPillState extends State<ReviewPill>
 }
 
 Future<void> showProfileSheet(BuildContext context, DashboardStore store,
-    String initials, VoidCallback? onSignOut) {
+    String initials, VoidCallback? onSignOut, {String? avatarUrl}) {
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: DashTheme.of(context).card,
@@ -216,7 +266,7 @@ Future<void> showProfileSheet(BuildContext context, DashboardStore store,
                           borderRadius: BorderRadius.circular(2)),
                     ),
                     const SizedBox(height: 20),
-                    _Avatar(initials: initials, size: 56),
+                    DashAvatar(initials: initials, avatarUrl: avatarUrl, size: 56),
                     const SizedBox(height: 20),
                     _SheetRow(
                       icon: Icons.dark_mode_rounded,
