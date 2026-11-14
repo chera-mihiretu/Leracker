@@ -86,7 +86,8 @@ void main() {
       );
 
       await tester.pumpWidget(buildWidget(animate: false));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byType(SignInPage), findsOneWidget);
       expect(find.byType(SplashPage), findsNothing);
@@ -100,7 +101,8 @@ void main() {
       );
 
       await tester.pumpWidget(buildWidget(animate: false));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byType(SignInPage), findsOneWidget);
       expect(find.byType(SplashPage), findsNothing);
@@ -120,7 +122,8 @@ void main() {
       when(() => mockAuthBloc.state).thenReturn(const Unauthenticated());
 
       await tester.pumpWidget(buildWidget(animate: false));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byType(SignInPage), findsOneWidget);
     });

@@ -193,6 +193,35 @@ void main() {
       verify(() => mockRemoteDataSource.archiveTask('t1')).called(1);
       verify(() => mockLocalDataSource.archiveTask('t1')).called(1);
     });
+
+    test('when offline: archives locally without calling remote', () async {
+      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
+      when(
+        () => mockLocalDataSource.archiveTask('t1'),
+      ).thenAnswer((_) async {});
+
+      final result = await repository.archiveTask('t1');
+
+      expect(result, const Right(null));
+      verifyNever(() => mockRemoteDataSource.archiveTask(any()));
+      verify(() => mockLocalDataSource.archiveTask('t1')).called(1);
+    });
+
+    test('when online but remote fails with ServerException: returns ServerFailure', () async {
+      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
+      when(
+        () => mockRemoteDataSource.archiveTask('t1'),
+      ).thenThrow(const ServerException(message: 'Remote archive failed'));
+
+      final result = await repository.archiveTask('t1');
+
+      expect(result.isLeft(), isTrue);
+      result.fold(
+        (failure) => expect(failure, isA<ServerFailure>()),
+        (_) => fail('should fail'),
+      );
+      verifyNever(() => mockLocalDataSource.archiveTask(any()));
+    });
   });
 
   group('recordTaskEntry', () {

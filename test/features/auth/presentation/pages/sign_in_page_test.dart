@@ -7,6 +7,7 @@ import 'package:progress_tracker/features/auth/presentation/bloc/auth_bloc.dart'
 import 'package:progress_tracker/features/auth/presentation/bloc/auth_event.dart';
 import 'package:progress_tracker/features/auth/presentation/bloc/auth_state.dart';
 import 'package:progress_tracker/features/auth/presentation/pages/sign_in_page.dart';
+import 'package:progress_tracker/features/auth/presentation/widgets/google_button.dart';
 
 class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
 
@@ -30,16 +31,18 @@ void main() {
     when(() => mockAuthBloc.state).thenReturn(const Unauthenticated());
 
     await tester.pumpWidget(buildWidget());
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Progress Tracker'), findsOneWidget);
     expect(find.text('Continue with Google'), findsOneWidget);
-    expect(find.byType(OutlinedButton), findsOneWidget);
+    expect(find.byType(GoogleButton), findsOneWidget);
   });
 
   testWidgets('shows loading indicator when state is AuthLoading', (tester) async {
     when(() => mockAuthBloc.state).thenReturn(const AuthLoading());
 
     await tester.pumpWidget(buildWidget());
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.text('Continue with Google'), findsNothing);
@@ -49,10 +52,11 @@ void main() {
     when(() => mockAuthBloc.state).thenReturn(const Unauthenticated());
 
     await tester.pumpWidget(buildWidget());
+    await tester.pump(const Duration(milliseconds: 300));
+
     await tester.tap(find.text('Continue with Google'));
     await tester.pump();
 
     verify(() => mockAuthBloc.add(const SignInWithGoogleRequested())).called(1);
   });
 }
-
