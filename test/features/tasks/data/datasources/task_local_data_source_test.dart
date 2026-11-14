@@ -46,6 +46,36 @@ void main() {
       final tasks = await dataSource.getTasks();
       expect(tasks.length, 2);
     });
+
+    test('deleteTask removes task from storage', () async {
+      await dataSource.saveTask(task1);
+      await dataSource.deleteTask(task1.id);
+
+      final tasks = await dataSource.getTasks();
+      expect(tasks, isEmpty);
+    });
+
+    test('getUnsyncedTasks returns only tasks marked isUploaded: false and not archived', () async {
+      final uploadedTask = task1.copyWith(isUploaded: true);
+      final unsyncedTask = task2.copyWith(isUploaded: false);
+      final archivedUnsyncedTask = TaskModel(
+        id: 't3',
+        userId: 'u1',
+        name: 'Task 3',
+        createdAt: now,
+        isUploaded: false,
+        archived: true,
+      );
+
+      await dataSource.saveTask(uploadedTask);
+      await dataSource.saveTask(unsyncedTask);
+      await dataSource.saveTask(archivedUnsyncedTask);
+
+      final unsynced = await dataSource.getUnsyncedTasks();
+      expect(unsynced.length, 1);
+      expect(unsynced.first.id, 't2');
+      expect(unsynced.first.isUploaded, isFalse);
+    });
   });
 
   group('TaskEntries storage', () {
@@ -96,6 +126,18 @@ void main() {
 
       final grouped = await dataSource.getTaskEntries();
       expect(grouped['t1']?.length, 2);
+    });
+
+    test('updateEntryTaskId updates taskId of matching entries', () async {
+      await dataSource.saveTaskEntries([entry1, entry2]);
+      await dataSource.updateEntryTaskId(oldTaskId: 't1', newTaskId: 't1_remote');
+
+      final oldEntries = await dataSource.getEntriesForTask('t1');
+      final newEntries = await dataSource.getEntriesForTask('t1_remote');
+
+      expect(oldEntries, isEmpty);
+      expect(newEntries.length, 2);
+      expect(newEntries.first.taskId, 't1_remote');
     });
   });
 }

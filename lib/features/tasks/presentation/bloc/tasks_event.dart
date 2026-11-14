@@ -63,3 +63,7 @@ class RecordEntrySubmitted extends TasksEvent {
   List<Object?> get props => [taskId, entryDate, status];
 }
 
+class SyncTasksRequested extends TasksEvent {
+  const SyncTasksRequested();
+}
+

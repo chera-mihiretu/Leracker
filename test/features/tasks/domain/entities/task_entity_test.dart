@@ -45,6 +45,14 @@ void main() {
       expect(updated.reminderCount, 2);
       expect(updated.gridColor, '#8B5CF6');
       expect(updated.includeInMorningReview, false);
+      expect(updated.isUploaded, true);
+
+      final unuploaded = task1.copyWith(isUploaded: false);
+      expect(unuploaded.isUploaded, false);
+    });
+
+    test('isUploaded defaults to true', () {
+      expect(task1.isUploaded, isTrue);
     });
   });
 }

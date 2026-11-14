@@ -47,6 +47,12 @@ void main() {
       expect(result.includeInMorningReview, false);
       expect(result.createdAt, now);
       expect(result.archived, false);
+      expect(result.isUploaded, true);
+
+      final unuploadedJson = Map<String, dynamic>.from(json);
+      unuploadedJson['is_uploaded'] = false;
+      final unuploadedModel = TaskModel.fromJson(unuploadedJson);
+      expect(unuploadedModel.isUploaded, false);
     });
 
     test('toJson serializes model to json map correctly', () {

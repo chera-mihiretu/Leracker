@@ -25,5 +25,9 @@ abstract class TaskRepository {
     required String status,
   });
   Future<Either<Failure, Map<String, List<TaskEntryEntity>>>> getAllTaskEntries();
+
+  /// Synchronizes local tasks that have not yet been uploaded to remote.
+  /// Skips already uploaded tasks to prevent duplicate uploads.
+  Future<Either<Failure, List<TaskEntity>>> syncUnsyncedTasks();
 }
 

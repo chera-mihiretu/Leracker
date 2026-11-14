@@ -10,6 +10,7 @@ import 'package:progress_tracker/features/tasks/domain/usecases/add_task.dart';
 import 'package:progress_tracker/features/tasks/domain/usecases/get_task_entries.dart';
 import 'package:progress_tracker/features/tasks/domain/usecases/get_tasks.dart';
 import 'package:progress_tracker/features/tasks/domain/usecases/record_task_entry.dart';
+import 'package:progress_tracker/features/tasks/domain/usecases/sync_tasks.dart';
 import 'package:progress_tracker/features/tasks/presentation/bloc/tasks_bloc.dart';
 import 'package:progress_tracker/features/tasks/presentation/bloc/tasks_event.dart';
 import 'package:progress_tracker/features/tasks/presentation/bloc/tasks_state.dart';
@@ -18,12 +19,14 @@ class MockGetTasks extends Mock implements GetTasks {}
 class MockAddTask extends Mock implements AddTask {}
 class MockGetTaskEntries extends Mock implements GetTaskEntries {}
 class MockRecordTaskEntry extends Mock implements RecordTaskEntry {}
+class MockSyncTasks extends Mock implements SyncTasks {}
 
 void main() {
   late MockGetTasks mockGetTasks;
   late MockAddTask mockAddTask;
   late MockGetTaskEntries mockGetTaskEntries;
   late MockRecordTaskEntry mockRecordTaskEntry;
+  late MockSyncTasks mockSyncTasks;
   late TasksBloc tasksBloc;
 
   setUpAll(() {
@@ -41,12 +44,14 @@ void main() {
     mockAddTask = MockAddTask();
     mockGetTaskEntries = MockGetTaskEntries();
     mockRecordTaskEntry = MockRecordTaskEntry();
+    mockSyncTasks = MockSyncTasks();
 
     tasksBloc = TasksBloc(
       getTasks: mockGetTasks,
       addTask: mockAddTask,
       getTaskEntries: mockGetTaskEntries,
       recordTaskEntry: mockRecordTaskEntry,
+      syncTasks: mockSyncTasks,
     );
   });
 
@@ -205,6 +210,64 @@ void main() {
         const TasksError('Failed to record'),
       ],
     );
+  });
+
+  group('SyncTasksRequested', () {
+    final localUnsyncedTask = TaskEntity(
+      id: 'local_1',
+      userId: 'local_user',
+      name: 'Read Book',
+      createdAt: now,
+      isUploaded: false,
+    );
+    final remoteUploadedTask = TaskEntity(
+      id: 'remote_1',
+      userId: 'u1',
+      name: 'Read Book',
+      createdAt: now,
+      isUploaded: true,
+    );
+
+    blocTest<TasksBloc, TasksState>(
+      'replaces un-uploaded local task with uploaded task on successful sync',
+      build: () {
+        when(() => mockSyncTasks(any()))
+            .thenAnswer((_) async => Right([remoteUploadedTask]));
+        return tasksBloc;
+      },
+      seed: () => TasksLoaded(
+        tasks: [localUnsyncedTask],
+        entriesByTaskId: const {},
+      ),
+      act: (bloc) => bloc.add(const SyncTasksRequested()),
+      expect: () => [
+        TasksLoaded(
+          tasks: [remoteUploadedTask],
+          entriesByTaskId: const {},
+        ),
+      ],
+    );
+
+    test('periodic sync starts and can be stopped', () async {
+      when(() => mockSyncTasks(any()))
+          .thenAnswer((_) async => const Right([]));
+
+      final autoBloc = TasksBloc(
+        getTasks: mockGetTasks,
+        addTask: mockAddTask,
+        getTaskEntries: mockGetTaskEntries,
+        recordTaskEntry: mockRecordTaskEntry,
+        syncTasks: mockSyncTasks,
+        syncInterval: const Duration(milliseconds: 50),
+        autoStartSyncTimer: true,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 120));
+      autoBloc.stopPeriodicSync();
+      await autoBloc.close();
+
+      verify(() => mockSyncTasks(any())).called(greaterThanOrEqualTo(1));
+    });
   });
 }
 

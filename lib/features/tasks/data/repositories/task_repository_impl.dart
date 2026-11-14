@@ -67,12 +67,13 @@ class TaskRepositoryImpl implements TaskRepository {
           gridColor: gridColor,
           includeInMorningReview: includeInMorningReview,
         );
-        await localDataSource.saveTask(remoteTask);
-        return Right(remoteTask);
+        final markedTask = remoteTask.copyWith(isUploaded: true);
+        await localDataSource.saveTask(markedTask);
+        return Right(markedTask);
       } else {
-        // Create local optimistic task
+        // Create local optimistic task marked as not uploaded
         final localTask = TaskModel(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: 'local_${DateTime.now().millisecondsSinceEpoch}',
           userId: 'local_user',
           name: name,
           frequencyType: effectiveFreq,
@@ -83,6 +84,7 @@ class TaskRepositoryImpl implements TaskRepository {
           gridColor: gridColor,
           includeInMorningReview: includeInMorningReview,
           createdAt: DateTime.now(),
+          isUploaded: false,
         );
         await localDataSource.saveTask(localTask);
         return Right(localTask);
@@ -182,6 +184,52 @@ class TaskRepositoryImpl implements TaskRepository {
       }
     } on ServerException catch (e) {
       return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<TaskEntity>>> syncUnsyncedTasks() async {
+    try {
+      if (!await networkInfo.isConnected) {
+        return const Right([]);
+      }
+
+      final unsyncedTasks = await localDataSource.getUnsyncedTasks();
+      if (unsyncedTasks.isEmpty) {
+        return const Right([]);
+      }
+
+      final uploadedTasks = <TaskEntity>[];
+      for (final localTask in unsyncedTasks) {
+        try {
+          final remoteTask = await remoteDataSource.addTask(
+            name: localTask.name,
+            frequencyType: localTask.frequencyType,
+            daysOfWeek: localTask.daysOfWeek,
+            monthlyRule: localTask.monthlyRule,
+            startTime: localTask.startTime,
+            reminderCount: localTask.reminderCount,
+            gridColor: localTask.gridColor,
+            includeInMorningReview: localTask.includeInMorningReview,
+          );
+
+          // Mark as uploaded, remove temporary local task and save remote task
+          final markedTask = remoteTask.copyWith(isUploaded: true);
+          await localDataSource.deleteTask(localTask.id);
+          await localDataSource.saveTask(markedTask);
+          await localDataSource.updateEntryTaskId(
+            oldTaskId: localTask.id,
+            newTaskId: markedTask.id,
+          );
+          uploadedTasks.add(markedTask);
+        } catch (_) {
+          // Leave unsynced for next sync retry
+        }
+      }
+
+      return Right(uploadedTasks);
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }

@@ -23,6 +23,7 @@ import 'features/tasks/domain/usecases/add_task.dart';
 import 'features/tasks/domain/usecases/get_task_entries.dart';
 import 'features/tasks/domain/usecases/get_tasks.dart';
 import 'features/tasks/domain/usecases/record_task_entry.dart';
+import 'features/tasks/domain/usecases/sync_tasks.dart';
 import 'features/tasks/presentation/bloc/tasks_bloc.dart';
 
 final sl = GetIt.instance;
@@ -219,6 +220,7 @@ Future<void> initInjection({String envPath = 'assets/keys/.env'}) async {
   sl.registerLazySingleton(() => AddTask(sl()));
   sl.registerLazySingleton(() => GetTaskEntries(sl()));
   sl.registerLazySingleton(() => RecordTaskEntry(sl()));
+  sl.registerLazySingleton(() => SyncTasks(sl()));
 
   // BLoC (Factory)
   sl.registerFactory(
@@ -227,6 +229,9 @@ Future<void> initInjection({String envPath = 'assets/keys/.env'}) async {
       addTask: sl(),
       getTaskEntries: sl(),
       recordTaskEntry: sl(),
+      syncTasks: sl(),
+      autoStartSyncTimer: true,
+      syncInterval: const Duration(seconds: 15),
     ),
   );
 }

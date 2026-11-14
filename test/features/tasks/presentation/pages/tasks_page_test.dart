@@ -143,6 +143,59 @@ void main() {
     expect(find.textContaining('What habit or goal'), findsOneWidget);
   });
 
+  testWidgets(
+      'creating task via TaskSetupFlow dispatches AddTaskSubmitted only when final button is tapped',
+      (tester) async {
+    when(() => mockTasksBloc.state).thenReturn(const TasksLoaded(
+      tasks: [],
+      entriesByTaskId: {},
+    ));
+
+    await tester.pumpWidget(buildWidget());
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Tap zero state create habit button
+    await tester.tap(find.text('Create your first habit'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Step 1: select chip
+    await tester.tap(find.text('Workout'));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    Future<void> next() async {
+      await tester.tap(find.text('Continue'));
+      await tester.pump(const Duration(milliseconds: 700));
+    }
+
+    await next(); // -> page 2
+    verifyNever(() => mockTasksBloc.add(any(that: isA<AddTaskSubmitted>())));
+
+    await next(); // -> page 3
+    verifyNever(() => mockTasksBloc.add(any(that: isA<AddTaskSubmitted>())));
+
+    await next(); // -> page 4
+    verifyNever(() => mockTasksBloc.add(any(that: isA<AddTaskSubmitted>())));
+
+    await next(); // -> page 5
+    verifyNever(() => mockTasksBloc.add(any(that: isA<AddTaskSubmitted>())));
+
+    await next(); // -> page 6 (ReviewPage)
+    verifyNever(() => mockTasksBloc.add(any(that: isA<AddTaskSubmitted>())));
+
+    // Final confirmation button
+    final finalButton = find.text('Create habit and start grid');
+    expect(finalButton, findsOneWidget);
+    await tester.tap(finalButton);
+    await tester.pump(const Duration(milliseconds: 1200));
+
+    // Request is dispatched when final button is tapped
+    verify(() => mockTasksBloc.add(any(that: isA<AddTaskSubmitted>()))).called(1);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 4));
+  });
+
   testWidgets('tapping avatar opens profile sheet and allows sign out',
       (tester) async {
     when(() => mockTasksBloc.state).thenReturn(const TasksLoaded(

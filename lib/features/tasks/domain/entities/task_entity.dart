@@ -13,6 +13,7 @@ class TaskEntity extends Equatable {
   final bool includeInMorningReview;
   final DateTime createdAt;
   final bool archived;
+  final bool isUploaded;
 
   const TaskEntity({
     required this.id,
@@ -27,6 +28,7 @@ class TaskEntity extends Equatable {
     this.includeInMorningReview = true,
     required this.createdAt,
     this.archived = false,
+    this.isUploaded = true,
     String? frequency,
   }) : frequencyType = frequency ?? frequencyType;
 
@@ -47,6 +49,7 @@ class TaskEntity extends Equatable {
     bool? includeInMorningReview,
     DateTime? createdAt,
     bool? archived,
+    bool? isUploaded,
   }) {
     return TaskEntity(
       id: id ?? this.id,
@@ -62,6 +65,7 @@ class TaskEntity extends Equatable {
           includeInMorningReview ?? this.includeInMorningReview,
       createdAt: createdAt ?? this.createdAt,
       archived: archived ?? this.archived,
+      isUploaded: isUploaded ?? this.isUploaded,
     );
   }
 
@@ -79,6 +83,7 @@ class TaskEntity extends Equatable {
         includeInMorningReview,
         createdAt,
         archived,
+        isUploaded,
       ];
 }
 

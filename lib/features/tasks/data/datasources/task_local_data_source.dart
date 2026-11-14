@@ -6,11 +6,17 @@ abstract class TaskLocalDataSource {
   Future<void> saveTasks(List<TaskModel> tasks);
   Future<void> saveTask(TaskModel task);
   Future<void> archiveTask(String taskId);
+  Future<void> deleteTask(String taskId);
+  Future<List<TaskModel>> getUnsyncedTasks();
 
   Future<Map<String, List<TaskEntryModel>>> getTaskEntries();
   Future<List<TaskEntryModel>> getEntriesForTask(String taskId);
   Future<void> saveTaskEntry(TaskEntryModel entry);
   Future<void> saveTaskEntries(List<TaskEntryModel> entries);
+  Future<void> updateEntryTaskId({
+    required String oldTaskId,
+    required String newTaskId,
+  });
 }
 
 class InMemoryTaskLocalDataSource implements TaskLocalDataSource {
@@ -56,8 +62,19 @@ class InMemoryTaskLocalDataSource implements TaskLocalDataSource {
         frequency: t.frequency,
         createdAt: t.createdAt,
         archived: true,
+        isUploaded: t.isUploaded,
       );
     }
+  }
+
+  @override
+  Future<void> deleteTask(String taskId) async {
+    _tasks.removeWhere((t) => t.id == taskId);
+  }
+
+  @override
+  Future<List<TaskModel>> getUnsyncedTasks() async {
+    return _tasks.where((t) => !t.isUploaded && !t.archived).toList();
   }
 
   @override
@@ -94,6 +111,25 @@ class InMemoryTaskLocalDataSource implements TaskLocalDataSource {
   Future<void> saveTaskEntries(List<TaskEntryModel> entries) async {
     for (final entry in entries) {
       await saveTaskEntry(entry);
+    }
+  }
+
+  @override
+  Future<void> updateEntryTaskId({
+    required String oldTaskId,
+    required String newTaskId,
+  }) async {
+    for (int i = 0; i < _entries.length; i++) {
+      if (_entries[i].taskId == oldTaskId) {
+        _entries[i] = TaskEntryModel(
+          id: _entries[i].id,
+          taskId: newTaskId,
+          userId: _entries[i].userId,
+          entryDate: _entries[i].entryDate,
+          status: _entries[i].status,
+          answeredAt: _entries[i].answeredAt,
+        );
+      }
     }
   }
 }

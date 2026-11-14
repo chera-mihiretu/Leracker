@@ -14,6 +14,7 @@ class TaskModel extends TaskEntity {
     super.includeInMorningReview = true,
     required super.createdAt,
     super.archived = false,
+    super.isUploaded = true,
     super.frequency,
   });
 
@@ -42,6 +43,7 @@ class TaskModel extends TaskEntity {
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
       archived: json['archived'] as bool? ?? false,
+      isUploaded: json['is_uploaded'] as bool? ?? true,
     );
   }
 
@@ -60,6 +62,7 @@ class TaskModel extends TaskEntity {
       'include_in_morning_review': includeInMorningReview,
       'created_at': createdAt.toIso8601String(),
       'archived': archived,
+      'is_uploaded': isUploaded,
     };
   }
 
@@ -77,6 +80,7 @@ class TaskModel extends TaskEntity {
       includeInMorningReview: entity.includeInMorningReview,
       createdAt: entity.createdAt,
       archived: entity.archived,
+      isUploaded: entity.isUploaded,
     );
   }
 
@@ -95,6 +99,7 @@ class TaskModel extends TaskEntity {
     bool? includeInMorningReview,
     DateTime? createdAt,
     bool? archived,
+    bool? isUploaded,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -110,6 +115,7 @@ class TaskModel extends TaskEntity {
           includeInMorningReview ?? this.includeInMorningReview,
       createdAt: createdAt ?? this.createdAt,
       archived: archived ?? this.archived,
+      isUploaded: isUploaded ?? this.isUploaded,
     );
   }
 }

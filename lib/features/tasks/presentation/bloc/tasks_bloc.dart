@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/usecases/usecase.dart';
+import '../../domain/entities/task_entity.dart';
 import '../../domain/entities/task_entry_entity.dart';
 import '../../domain/usecases/add_task.dart';
 import '../../domain/usecases/get_task_entries.dart';
 import '../../domain/usecases/get_tasks.dart';
 import '../../domain/usecases/record_task_entry.dart';
+import '../../domain/usecases/sync_tasks.dart';
 import 'tasks_event.dart';
 import 'tasks_state.dart';
 
@@ -13,16 +17,45 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
   final AddTask addTask;
   final GetTaskEntries getTaskEntries;
   final RecordTaskEntry recordTaskEntry;
+  final SyncTasks? syncTasks;
+  final Duration? syncInterval;
+  Timer? _syncTimer;
 
   TasksBloc({
     required this.getTasks,
     required this.addTask,
     required this.getTaskEntries,
     required this.recordTaskEntry,
+    this.syncTasks,
+    this.syncInterval = const Duration(seconds: 15),
+    bool autoStartSyncTimer = false,
   }) : super(const TasksInitial()) {
     on<LoadTasksRequested>(_onLoadTasksRequested);
     on<AddTaskSubmitted>(_onAddTaskSubmitted);
     on<RecordEntrySubmitted>(_onRecordEntrySubmitted);
+    on<SyncTasksRequested>(_onSyncTasksRequested);
+
+    if (autoStartSyncTimer && syncInterval != null && syncTasks != null) {
+      startPeriodicSync(syncInterval!);
+    }
+  }
+
+  void startPeriodicSync([Duration interval = const Duration(seconds: 15)]) {
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(interval, (_) {
+      add(const SyncTasksRequested());
+    });
+  }
+
+  void stopPeriodicSync() {
+    _syncTimer?.cancel();
+    _syncTimer = null;
+  }
+
+  @override
+  Future<void> close() {
+    _syncTimer?.cancel();
+    return super.close();
   }
 
   Future<void> _onLoadTasksRequested(
@@ -118,6 +151,41 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
           emit(TasksLoaded(
             tasks: current.tasks,
             entriesByTaskId: updatedEntries,
+          ));
+        }
+      },
+    );
+  }
+
+  Future<void> _onSyncTasksRequested(
+    SyncTasksRequested event,
+    Emitter<TasksState> emit,
+  ) async {
+    if (syncTasks == null) return;
+    final result = await syncTasks!(const NoParams());
+    result.fold(
+      (_) {},
+      (uploadedTasks) {
+        if (uploadedTasks.isNotEmpty && state is TasksLoaded) {
+          final current = state as TasksLoaded;
+          final updatedTasks = List<TaskEntity>.from(current.tasks);
+
+          for (final uploaded in uploadedTasks) {
+            final index = updatedTasks.indexWhere(
+              (t) =>
+                  t.id == uploaded.id ||
+                  (!t.isUploaded && t.name == uploaded.name),
+            );
+            if (index >= 0) {
+              updatedTasks[index] = uploaded;
+            } else {
+              updatedTasks.add(uploaded);
+            }
+          }
+
+          emit(TasksLoaded(
+            tasks: updatedTasks,
+            entriesByTaskId: current.entriesByTaskId,
           ));
         }
       },
